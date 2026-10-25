@@ -1,0 +1,538 @@
+<!doctype html>
+<html lang="it"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Turni Pulizie</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&family=Figtree:wght@400;500;600&display=swap">
+<style>
+:root{color-scheme:light;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+body{margin:0}
+[hidden]{display:none!important}
+img{max-width:100%}
+.gate{max-width:420px;margin:14vh auto 0;display:flex;flex-direction:column;gap:14px;align-items:flex-start}
+
+/* Layout: una colonna stretta da telefono. Lista a righe separate da filetti, raggruppata per scadenza (in ritardo, oggi, domani, settimana). Niente carte annidate. */
+:root{
+  --bg:#EFF5F5; --surface:#FFFFFF; --ink:#102A2D; --muted:#566E71; --line:#D3E0E1;
+  --accent:#0B7A85; --accent-ink:#FFFFFF; --soft:#DDEDEE;
+  --p0:#0B7A85; --p1:#8C4FC2;
+  --late:#C23B3B; --late-soft:#F8E1E1; --ok:#2E7D4F; --warn:#A85500; --warn-soft:#FBE6CB;
+  --f-display:"Bricolage Grotesque","Trebuchet MS",system-ui,sans-serif;
+  --f-body:"Figtree",system-ui,-apple-system,"Segoe UI",sans-serif;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#0C1A1C; --surface:#13282B; --ink:#E4F1F1; --muted:#93AEB1; --line:#25403F;
+  --accent:#3CC0CC; --accent-ink:#062428; --soft:#18363A;
+  --p0:#3CC0CC; --p1:#B88AEA; --late:#F07878; --late-soft:#3A1F22; --ok:#6CCB92; --warn:#F5A94A; --warn-soft:#3B2A14; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0C1A1C; --surface:#13282B; --ink:#E4F1F1; --muted:#93AEB1; --line:#25403F;
+  --accent:#3CC0CC; --accent-ink:#062428; --soft:#18363A;
+  --p0:#3CC0CC; --p1:#B88AEA; --late:#F07878; --late-soft:#3A1F22; --ok:#6CCB92; --warn:#F5A94A; --warn-soft:#3B2A14; color-scheme:dark}
+
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:16px;line-height:1.45;
+  padding-block:20px 120px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+.wrap{max-width:640px;margin:0 auto;display:flex;flex-direction:column;gap:26px}
+h1,h2{font-family:var(--f-display);margin:0;text-wrap:balance}
+button{font:inherit;color:inherit;cursor:pointer}
+:focus-visible{outline:3px solid var(--accent);outline-offset:2px;border-radius:8px}
+.tn{font-variant-numeric:tabular-nums}
+
+header{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:flex-end;gap:12px}
+h1{font-size:2rem;font-weight:800;letter-spacing:-.02em;line-height:1.05}
+.date{color:var(--muted);text-transform:capitalize;font-size:.95rem;margin-top:4px}
+.me{display:flex;align-items:center;gap:8px;font-size:.8rem;color:var(--muted)}
+.seg{display:flex;background:var(--soft);border-radius:999px;padding:3px}
+.seg button{border:0;background:transparent;padding:6px 12px;border-radius:999px;font-weight:600;font-size:.88rem;color:var(--muted);max-width:9rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.seg button[aria-pressed="true"]{background:var(--surface);color:var(--ink);box-shadow:0 1px 2px rgba(0,0,0,.18)}
+
+.notice{background:var(--soft);padding:12px 14px;border-radius:12px;font-size:.92rem;display:flex;flex-direction:column;gap:10px}
+.notice .seg{align-self:flex-start}
+
+.summary{display:flex;flex-direction:column;gap:14px}
+.status{display:flex;flex-wrap:wrap;gap:8px 18px;font-size:.98rem}
+.status b{font-family:var(--f-display);font-size:1.5rem;margin-right:6px;font-weight:800}
+.status .late b{color:var(--late)}
+.bar{display:flex;height:12px;border-radius:99px;overflow:hidden;background:var(--soft)}
+.bar span{display:block;height:100%;transition:width .4s}
+.bar-legend{display:flex;justify-content:space-between;gap:12px;font-size:.88rem;color:var(--muted);flex-wrap:wrap}
+.dot{display:inline-block;width:10px;height:10px;border-radius:50%;background:var(--c);margin-right:6px}
+
+.group h2{font-size:1.05rem;font-weight:800;display:flex;gap:10px;align-items:baseline;padding-bottom:8px;border-bottom:2px solid var(--ink)}
+.group h2 small{font-family:var(--f-body);font-weight:500;color:var(--muted);font-size:.85rem}
+.group.late h2{color:var(--late);border-color:var(--late)}
+ul{list-style:none;margin:0;padding:0}
+.item{border-bottom:1px solid var(--line)}
+.row{display:flex;align-items:center;gap:12px;padding:12px 0}
+.check{flex:none;width:44px;height:44px;border-radius:50%;border:2px solid var(--muted);background:transparent;display:grid;place-items:center;color:transparent;transition:.15s}
+.check:hover{border-color:var(--ok);color:var(--ok)}
+.check:active{background:var(--ok);color:#fff;border-color:var(--ok)}
+.main{flex:1;min-width:0;display:flex;align-items:center;gap:12px;border:0;background:transparent;text-align:left;padding:0}
+.ic{flex:none;width:38px;height:38px;border-radius:10px;background:var(--soft);display:grid;place-items:center;color:var(--accent)}
+.txt{min-width:0;display:flex;flex-direction:column}
+.nm{font-weight:600;overflow-wrap:anywhere}
+.meta{font-size:.86rem;color:var(--muted)}
+.late .meta.due{color:var(--late);font-weight:600}
+.who{flex:none;font-size:.78rem;font-weight:600;padding:3px 9px;border-radius:99px;border:1.5px solid var(--c);color:var(--c);max-width:7.5rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.who.own{background:var(--c);color:var(--surface)}
+.detail{padding:2px 0 16px 56px;display:flex;flex-direction:column;gap:12px;font-size:.93rem}
+.detail p{margin:0;color:var(--muted);max-width:60ch}
+.facts{display:flex;flex-wrap:wrap;gap:6px 16px;font-size:.86rem}
+.facts span{color:var(--muted)}
+.facts b{color:var(--ink);font-weight:600}
+.acts{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.btn{border:1.5px solid var(--c,var(--ink));background:transparent;border-radius:10px;padding:8px 12px;font-weight:600;font-size:.9rem;color:var(--c,var(--ink))}
+.btn.fill{background:var(--c,var(--accent));color:var(--surface)}
+select,input[type=text],input[type=number]{font:inherit;background:var(--surface);color:var(--ink);border:1.5px solid var(--line);border-radius:10px;padding:8px 10px;min-width:0}
+.empty{padding:18px 0;color:var(--muted)}
+
+details.panel{border-top:2px solid var(--ink);padding-top:10px}
+details.panel summary{font-family:var(--f-display);font-weight:800;font-size:1.05rem;cursor:pointer;padding:6px 0}
+.panel .body{display:flex;flex-direction:column;gap:14px;padding-top:8px}
+.field{display:grid;grid-template-columns:1fr auto;gap:10px;align-items:center}
+.field label{min-width:0;overflow-wrap:anywhere}
+.field input[type=number]{width:5.5rem}
+.names{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.names input{width:100%}
+.hist li{display:flex;gap:10px;align-items:center;padding:8px 0;border-bottom:1px solid var(--line);font-size:.92rem}
+.hist .t{flex:1;min-width:0;overflow-wrap:anywhere}
+.hist .w{color:var(--muted);font-size:.82rem}
+.x{border:0;background:transparent;color:var(--muted);font-size:.85rem;text-decoration:underline;padding:6px}
+.fine{font-size:.82rem;color:var(--muted);max-width:60ch}
+
+.toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(16px + env(safe-area-inset-bottom,0px));background:var(--ink);color:var(--bg);padding:10px 12px 10px 16px;border-radius:12px;display:flex;gap:12px;align-items:center;max-width:calc(100% - 32px);box-shadow:0 6px 24px rgba(0,0,0,.25);z-index:20;font-size:.93rem}
+.toast button{border:0;background:transparent;color:var(--accent);font-weight:700;padding:6px 8px;filter:brightness(1.3)}
+.top,.view{display:flex;flex-direction:column;gap:26px}
+.top{gap:18px}
+.tabs{display:flex;gap:6px;border-bottom:2px solid var(--ink)}
+.tabs button{border:0;background:transparent;padding:10px 16px;font-family:var(--f-display);font-weight:800;font-size:1.05rem;color:var(--muted);border-radius:10px 10px 0 0;display:flex;gap:8px;align-items:center}
+.tabs button[aria-pressed="true"]{background:var(--ink);color:var(--bg)}
+.badge{background:var(--late);color:#fff;border-radius:99px;font:700 .75rem var(--f-body);padding:1px 7px}
+.form{display:flex;flex-direction:column;gap:14px;padding-top:14px}
+.fld{display:flex;flex-direction:column;gap:6px}
+.fld label{font-size:.86rem;color:var(--muted);font-weight:600}
+textarea,input[type=date]{font:inherit;background:var(--surface);color:var(--ink);border:1.5px solid var(--line);border-radius:10px;padding:10px;min-width:0}
+textarea{width:100%;resize:vertical}
+input[type=date]{align-self:flex-start}
+.vh{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+label.btn{display:inline-block;cursor:pointer}
+label.btn:focus-within{outline:3px solid var(--accent);outline-offset:2px}
+.scan{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+.srow{display:flex;flex-wrap:wrap;gap:8px 12px;align-items:center;padding:12px 0}
+.srow .m{flex:1 1 13rem;min-width:0;display:flex;flex-direction:column}
+.pill{flex:none;font-size:.78rem;font-weight:700;padding:3px 10px;border-radius:99px;background:var(--soft);color:var(--muted)}
+.pill.out{background:var(--late-soft);color:var(--late)}
+.pill.soon{background:var(--warn-soft);color:var(--warn)}
+.pill.ok{background:var(--soft);color:var(--ok)}
+.group.soonG h2{color:var(--warn);border-color:var(--warn)}
+@media (max-width:420px){.detail{padding-left:0}.names{grid-template-columns:1fr}}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style></head><body>
+
+
+<div id="gate" class="gate" hidden><h1>Turni Pulizie</h1><p>Accedi con l’account Google autorizzato per vedere i turni di casa.</p><button class="btn fill" style="--c:var(--accent)" id="gate-btn">Accedi con Google</button><p class="fine" id="gate-msg" role="status"></p></div>
+<div class="wrap" hidden>
+<div id="top" class="top"></div>
+<div id="app" class="view" aria-live="polite"></div>
+<section id="spesa" class="view" hidden>
+<div class="group"><h2>Registra una spesa</h2>
+<div class="form">
+<div class="fld"><label for="sp-date">Data della spesa</label><input type="date" id="sp-date"></div>
+<div class="scan" id="scanbox" hidden><label class="btn" for="receipt-file">Leggi da foto dello scontrino<input class="vh" type="file" id="receipt-file" accept="image/*" multiple></label><span class="meta" id="scan-msg" role="status"></span></div>
+<div class="fld"><label for="sp-items">Prodotti, uno per riga</label><textarea id="sp-items" rows="6" placeholder="latte&#10;uova&#10;pasta&#10;carta igienica"></textarea></div>
+<div class="acts"><button class="btn fill" style="--c:var(--accent)" data-act="savespesa">Salva spesa</button></div>
+<p class="fine">Scrivi i prodotti con nomi semplici e sempre uguali (“latte”, “uova”): così l’app riconosce lo stesso prodotto negli acquisti successivi.</p>
+</div></div>
+<div id="spesa-dyn" class="view"></div>
+<p class="fine">Arancione: il prodotto ha raggiunto 3/4 della durata media. Rosso: ha superato la durata media di oltre il 10%, quindi quasi certamente è finito. Servono almeno due acquisti dello stesso prodotto, e la stima migliora a ogni scontrino.</p>
+</section>
+</div>
+<div id="toast" class="toast" hidden></div>
+
+
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
+<script src="firebase-config.js"></script>
+<script>
+(function(){
+"use strict";
+var SV=function(d){return '<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">'+d+'</svg>'};
+var CHECK=SV('<path d="M5 12.5l4.5 4.5L19 7.5"/>');
+var TASKS=[
+ {id:"aspirapolvere",name:"Passare l’aspirapolvere",every:3,min:20,scope:"camera, living, cucina, ingresso e bagno (circa 50 m²)",
+  icon:'<path d="M6 19a2 2 0 1 0 4 0a2 2 0 0 0-4 0z"/><path d="M10 19h8M14 19V9a3 3 0 0 1 6 0v3"/><path d="M4 19H3"/>',
+  why:"Toglie polvere, peli e gli allergeni degli acari da pavimenti e tappeti. Due passate a settimana tengono bassa la quantità di allergeni. Con animali o allergie conviene farlo più spesso, meglio con filtro HEPA."},
+ {id:"mocio",name:"Lavare il pavimento con il mocio",every:7,min:30,scope:"tutti i 50 m², cucina e bagno per ultimi, dopo l’aspirapolvere",
+  icon:'<path d="M12 3v10"/><path d="M7 13h10l1.5 5h-13z"/><path d="M8.5 21v-3M12 21v-3M15.5 21v-3"/>',
+  why:"I pavimenti raccolgono i batteri portati dalle scarpe. In casa basta una passata a settimana con detergente neutro. Cambia l’acqua quando diventa grigia e lava il panno a 60 °C. Passa prima l’aspirapolvere."},
+ {id:"vetri",name:"Lavare i vetri",every:21,min:45,scope:"3 finestre grandi, dentro e fuori, con i telai",
+  icon:'<rect x="4" y="3" width="16" height="18" rx="1.5"/><path d="M12 3v18M4 12h16"/>',
+  why:"Qui l’igiene conta poco. La frequenza serve a mantenere la luce e a tenere sotto controllo condensa e muffa sui telai. Una volta ogni tre settimane è un buon compromesso."},
+ {id:"bagno",name:"Pulire il bagno (WC e lavandino)",every:3,min:15,scope:"WC, lavandino, rubinetti e specchio del bagno",
+  icon:'<path d="M7 4h9v6"/><path d="M4 10h16c0 4-3 7-8 7s-8-3-8-7z"/><path d="M9 20h6"/>',
+  why:"Nel bagno i microbi tornano in poche ore e lo sciacquone proietta goccioline sulle superfici vicine. Per WC, lavandino e rubinetti le indicazioni di igiene domestica sono 2 o 3 pulizie a settimana, lasciando agire il detergente qualche minuto."},
+ {id:"doccia",name:"Pulire la doccia",every:7,min:15,scope:"pareti, piatto, scarico, soffione e guarnizioni",
+  icon:'<path d="M4 12a6 6 0 0 1 12 0z"/><path d="M16 12h4"/><path d="M7 15v1.5M10 15v1.5M13 15v1.5M8.5 19v1.5M11.5 19v1.5"/>',
+  why:"Umidità e residui di sapone formano biofilm e muffa. Una pulizia a settimana, più il tergivetro dopo l’uso e la porta lasciata aperta, la tiene sotto controllo."},
+ {id:"polvere",name:"Spolverare i mobili",every:7,min:25,scope:"mobili di camera, living e cucina, mensole, TV, piani e maniglie",
+  icon:'<path d="M14 4l6 6-9 9-6-6z"/><path d="M8 16l-4 4"/>',
+  why:"La polvere domestica porta con sé allergeni e particelle fini. Usa un panno in microfibra umido, che la trattiene invece di sollevarla. Parti dall’alto e finisci con l’aspirapolvere."},
+ {id:"lenzuola",name:"Cambiare e lavare le lenzuola",every:7,min:15,scope:"letto condiviso: lenzuola, federe e copri-piumino",
+  icon:'<path d="M3 18V7M3 14h18v4"/><path d="M21 14v-2a3 3 0 0 0-3-3h-7v5"/><circle cx="6.5" cy="11" r="1.6"/>',
+  why:"Nel letto si accumulano sudore e cellule della pelle, che nutrono gli acari, e in due se ne accumulano più in fretta. Il cambio settimanale è l’indicazione più comune, ogni due settimane al massimo. Il lavaggio a 60 °C elimina gli acari."},
+ {id:"asciugamani",name:"Cambiare e lavare gli asciugamani",every:4,min:10,personal:true,scope:"il proprio asciugamano e telo doccia, più il canovaccio di cucina",
+  icon:'<path d="M5 4h14v12H5z"/><path d="M5 8h14"/><path d="M8 16v4M12 16v4M16 16v4"/>',
+  why:"Restano umidi e sono un terreno ideale per i batteri. Si cambiano ogni 3 o 4 usi, circa ogni 4 giorni, e si lavano a 60 °C. Appendili aperti perché asciughino in fretta."}
+];
+var DAY=864e5;
+function esc(s){return String(s).replace(/[&<>"']/g,function(c){return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]})}
+function sod(ts){var d=new Date(ts);d.setHours(0,0,0,0);return d}
+function addDays(ts,n){var d=sod(ts);d.setDate(d.getDate()+n);return d}
+function diff(a,b){return Math.round((sod(a)-sod(b))/DAY)}
+function pl(n,w,ws){return n+" "+(n===1?w:ws)}
+function fmt(ts,o){return new Date(ts).toLocaleDateString("it-IT",o)}
+
+var cfg={members:["Amedeo","Elena"],every:{}};
+var view="pulizie",spese=[],sample=null,imgLim=null; var log=[]; var me=null; var openKey=null; var store=null; var offline=false; var toastTimer=null;
+try{var m=localStorage.getItem("pulizie.me"); if(m==="0"||m==="1") me=+m}catch(e){}
+function setMe(i){me=i;try{localStorage.setItem("pulizie.me",String(i))}catch(e){} render()}
+
+function instances(){
+  var out=[];
+  TASKS.forEach(function(t,ti){
+    if(t.personal){[0,1].forEach(function(i){out.push({key:t.id+":"+i,t:t,owner:i,ord:ti})})}
+    else out.push({key:t.id,t:t,owner:null,ord:ti});
+  });
+  return out;
+}
+function everyOf(t){var v=cfg.every&&cfg.every[t.id];return v>0?v:t.every}
+function lastMap(){var mp={};log.forEach(function(e){if(!mp[e.key]||e.at>mp[e.key].at)mp[e.key]=e});return mp}
+function load14(){
+  var from=Date.now()-14*DAY,r=[0,0];
+  log.forEach(function(e){if(e.at>=from&&(e.by===0||e.by===1))r[e.by]+=e.min||0});
+  return r;
+}
+function suggest(inst,lm,load){
+  if(inst.owner!==null)return inst.owner;
+  if(load[0]!==load[1])return load[0]<load[1]?0:1;
+  var l=lm[inst.key]; return l?1-l.by:0;
+}
+function nameOf(i){return cfg.members[i]||("Persona "+(i+1))}
+
+function compute(){
+  var now=Date.now(),lm=lastMap(),load=load14();
+  return instances().map(function(inst){
+    var l=lm[inst.key],ev=everyOf(inst.t);
+    var due=l?addDays(l.at,ev):sod(now);
+    return {inst:inst,last:l,ev:ev,due:due,days:diff(due,now),sug:suggest(inst,lm,load)};
+  }).sort(function(a,b){return a.days-b.days||a.inst.ord-b.inst.ord||(a.inst.owner||0)-(b.inst.owner||0)});
+}
+function dueLabel(r){
+  if(!r.last&&r.days<=0)return "Mai segnato";
+  if(r.days<0)return "In ritardo di "+pl(-r.days,"giorno","giorni");
+  if(r.days===0)return "Scade oggi";
+  if(r.days===1)return "Scade domani";
+  return "Scade "+fmt(r.due,{weekday:"long",day:"numeric",month:"short"});
+}
+function lastLabel(l){
+  if(!l)return "Mai segnato";
+  var d=diff(Date.now(),l.at);
+  return (d===0?"oggi":d===1?"ieri":d+" giorni fa")+", da "+nameOf(l.by);
+}
+
+function personChip(i,own){return '<span class="who'+(own?' own':'')+'" style="--c:var(--p'+i+')">'+(own?'di ':'tocca a ')+esc(nameOf(i))+'</span>'}
+
+function rowHtml(r){
+  var t=r.inst.t,k=r.inst.key,open=openKey===k;
+  var nm=t.name;
+  var chip=r.inst.owner!==null?personChip(r.inst.owner,true):personChip(r.sug,false);
+  var h='<li class="item"><div class="row">'+
+   '<button class="check" data-act="quick" data-key="'+k+'" aria-label="Segna come fatto: '+esc(nm)+'" title="Segna come fatto">'+CHECK+'</button>'+
+   '<button class="main" data-act="toggle" data-key="'+k+'" aria-expanded="'+open+'">'+
+   '<span class="ic">'+SV(t.icon)+'</span><span class="txt"><span class="nm">'+esc(nm)+'</span>'+
+   '<span class="meta due">'+dueLabel(r)+' · <span class="tn">'+t.min+'</span> min</span></span></button>'+chip+'</div>';
+  if(open){
+    var by=r.inst.owner!==null?[r.inst.owner]:[0,1];
+    h+='<div class="detail"><div class="facts"><span>Ogni <b class="tn">'+r.ev+'</b> giorni</span><span>Ultima volta: <b>'+esc(lastLabel(r.last))+'</b></span></div><div class="facts"><span>Include: <b>'+esc(t.scope)+'</b></span></div>'+
+      '<p>'+esc(t.why)+'</p><div class="acts">'+
+      by.map(function(i){return '<button class="btn'+(me===i?' fill':'')+'" style="--c:var(--p'+i+')" data-act="done" data-key="'+k+'" data-by="'+i+'">Fatto da '+esc(nameOf(i))+'</button>'}).join('')+
+      '<label class="meta" for="when-'+k.replace(":","-")+'">quando</label><select id="when-'+k.replace(":","-")+'" data-when="'+k+'">'+
+      '<option value="0">adesso</option><option value="1">ieri</option><option value="2">2 giorni fa</option><option value="3">3 giorni fa</option><option value="5">5 giorni fa</option><option value="7">una settimana fa</option><option value="14">due settimane fa</option></select>'+
+      '</div></div>';
+  }
+  return h+'</li>';
+}
+
+function groupsHtml(rows){
+  var G=[
+    {id:"late",title:"In ritardo",f:function(r){return r.days<0}},
+    {id:"today",title:"Oggi",f:function(r){return r.days===0}},
+    {id:"tom",title:"Domani",f:function(r){return r.days===1}},
+    {id:"week",title:"Nei prossimi giorni",f:function(r){return r.days>=2&&r.days<=7}},
+    {id:"later",title:"Più avanti",f:function(r){return r.days>7}}
+  ];
+  var h="";
+  G.forEach(function(g){
+    var rs=rows.filter(g.f); if(!rs.length)return;
+    var mins=rs.reduce(function(s,r){return s+r.inst.t.min},0);
+    h+='<section class="group '+g.id+'"><h2>'+g.title+'<small class="tn">'+rs.length+' · '+mins+' min</small></h2><ul>'+rs.map(rowHtml).join('')+'</ul></section>';
+  });
+  return h;
+}
+
+function summaryHtml(rows){
+  var late=rows.filter(function(r){return r.days<0}).length, today=rows.filter(function(r){return r.days===0}).length;
+  var load=load14(),tot=load[0]+load[1];
+  var p0=tot?Math.round(load[0]/tot*100):50;
+  var h='<div class="summary"><div class="status"><span class="late"><b class="tn">'+late+'</b>in ritardo</span><span><b class="tn">'+today+'</b>per oggi</span></div>';
+  h+='<div><div class="bar" role="img" aria-label="Pulizie degli ultimi 14 giorni: '+esc(nameOf(0))+' '+load[0]+' minuti, '+esc(nameOf(1))+' '+load[1]+' minuti">'+
+     (tot?'<span style="width:'+p0+'%;background:var(--p0)"></span><span style="width:'+(100-p0)+'%;background:var(--p1)"></span>':'')+'</div>'+
+     '<div class="bar-legend" style="margin-top:6px"><span><i class="dot" style="--c:var(--p0)"></i>'+esc(nameOf(0))+' <b class="tn">'+load[0]+'</b> min</span><span>ultimi 14 giorni</span><span><i class="dot" style="--c:var(--p1)"></i>'+esc(nameOf(1))+' <b class="tn">'+load[1]+'</b> min</span></div></div></div>';
+  return h;
+}
+
+function histHtml(){
+  var items=log.slice(0,8);
+  if(!items.length)return '<p class="fine">Ancora niente segnato.</p>';
+  var byId={};TASKS.forEach(function(t){byId[t.id]=t});
+  return '<ul class="hist">'+items.map(function(e){
+    var id=e.key.split(":")[0],t=byId[id];
+    return '<li><span class="t">'+esc(t?t.name:e.key)+' <span class="w">· '+esc(nameOf(e.by))+(e.key.indexOf(":")>0?' (suo)':'')+'</span></span><span class="w tn">'+esc(fmt(e.at,{day:"numeric",month:"short"}))+'</span><button class="x" data-act="del" data-id="'+esc(e.id)+'">annulla</button></li>';
+  }).join('')+'</ul>';
+}
+
+function settingsHtml(){
+  return '<details class="panel" id="settings"><summary>Impostazioni</summary><div class="body">'+
+   '<div class="names"><div><label class="meta" for="n0">Nome 1</label><input type="text" id="n0" data-name="0" value="'+esc(nameOf(0))+'" maxlength="24"></div>'+
+   '<div><label class="meta" for="n1">Nome 2</label><input type="text" id="n1" data-name="1" value="'+esc(nameOf(1))+'" maxlength="24"></div></div>'+
+   '<div><b>Ogni quanti giorni</b><p class="fine">Valori di partenza basati sulle indicazioni generali di igiene domestica. Cambiali se la vostra casa ha esigenze diverse (animali, allergie, molte persone).</p></div>'+
+   TASKS.map(function(t){return '<div class="field"><label for="ev-'+t.id+'">'+esc(t.name)+(t.personal?' <span class="meta">(ognuno il suo)</span>':'')+'</label><input type="number" id="ev-'+t.id+'" data-every="'+t.id+'" min="1" max="90" value="'+everyOf(t)+'"></div>'}).join('')+
+   '<div><b>Ultime pulizie segnate</b></div><div id="hist">'+histHtml()+'</div></div></details>';
+}
+
+function render(){
+  var app=document.getElementById("app"),top=document.getElementById("top");
+  var focusInside=app.contains(document.activeElement)&&/INPUT|SELECT/.test(document.activeElement.tagName);
+  if(focusInside&&document.getElementById("settings")&&document.getElementById("settings").contains(document.activeElement)){
+    var hs=document.getElementById("hist"); if(hs)hs.innerHTML=histHtml(); return;
+  }
+  var settingsOpen=document.getElementById("settings")&&document.getElementById("settings").open;
+  var rows=compute();
+  var h='<header><div><h1>Turni Pulizie</h1><div class="date">'+esc(fmt(Date.now(),{weekday:"long",day:"numeric",month:"long"}))+'</div></div>'+
+   '<div class="me"><span>Sei</span><div class="seg" role="group" aria-label="Chi sei">'+
+   [0,1].map(function(i){return '<button data-act="me" data-i="'+i+'" aria-pressed="'+(me===i)+'">'+esc(nameOf(i))+'</button>'}).join('')+'</div></div></header>'+navHtml();
+  if(me===null)h+='<div class="notice"><b>Chi sei?</b><span>Così i “fatto” vengono segnati a tuo nome. Lo ricordo su questo dispositivo.</span><div class="seg">'+
+    [0,1].map(function(i){return '<button data-act="me" data-i="'+i+'" aria-pressed="false">'+esc(nameOf(i))+'</button>'}).join('')+'</div></div>';
+  if(offline)h+='<div class="notice">Qui i dati non si sincronizzano e si perdono alla chiusura. Apri la pagina dal link condiviso per usarla in due.</div>';
+  h+='<!--V-->'+summaryHtml(rows)+groupsHtml(rows)+settingsHtml();
+  h+='<p class="fine">Il pulsante rotondo segna la pulizia come fatta ora, a tuo nome. Tocca una riga per vedere perché è ogni quanti giorni, segnarla per l’altra persona o indicare che l’hai già fatta qualche giorno fa. Il nome colorato indica a chi tocca in base ai minuti lavorati negli ultimi 14 giorni. I tempi sono stimati per un appartamento di 50 m² con un bagno, una cucina, un living e 3 finestre grandi.</p>';
+  var parts=h.split('<!--V-->');top.innerHTML=parts[0];app.innerHTML=parts[1];
+  app.hidden=view!=="pulizie";document.getElementById("spesa").hidden=view!=="spesa";renderSpesa();
+  if(settingsOpen)document.getElementById("settings").open=true;
+}
+
+function toast(msg,undo){
+  var el=document.getElementById("toast");
+  el.innerHTML='<span>'+esc(msg)+'</span>'+(undo?'<button id="undo">Annulla</button>':'');
+  el.hidden=false; clearTimeout(toastTimer);
+  if(undo)document.getElementById("undo").onclick=function(){el.hidden=true;undo()};
+  toastTimer=setTimeout(function(){el.hidden=true},6000);
+}
+function fail(){toast("Non riesco a salvare. Controlla la connessione e di aver fatto l’accesso con l’email autorizzata.")}
+
+function markDone(key,by,daysAgo){
+  var t=TASKS.filter(function(x){return x.id===key.split(":")[0]})[0];
+  var at=daysAgo?addDays(Date.now(),-daysAgo).setHours(12,0,0,0):Date.now();
+  store.add({key:key,by:by,at:at,min:t.min}).then(function(id){
+    openKey=null;
+    toast(t.name+" · fatto da "+nameOf(by),function(){store.del(id).catch(fail)});
+  }).catch(fail);
+}
+
+document.addEventListener("click",function(ev){
+  var b=ev.target.closest("[data-act]"); if(!b)return;
+  var a=b.dataset.act,k=b.dataset.key;
+  if(a==="me")return setMe(+b.dataset.i);
+  if(a==="view"){view=b.dataset.v;return render()}
+  if(a==="savespesa")return saveSpesa();
+  if(a==="delspesa"){store.delSpesa(b.dataset.id).catch(fail);return}
+  if(a==="rebuy")return rebuy(b.dataset.name);
+  if(a==="toggle"){openKey=openKey===k?null:k;return render()}
+  if(a==="quick"){
+    var owner=k.indexOf(":")>0?+k.split(":")[1]:(me===null?null:me);
+    if(owner===null){toast("Scegli prima chi sei, in alto.");return}
+    return markDone(k,owner,0);
+  }
+  if(a==="done"){
+    var sel=document.querySelector('[data-when="'+k+'"]');
+    return markDone(k,+b.dataset.by,sel?+sel.value:0);
+  }
+  if(a==="del"){store.del(b.dataset.id).catch(fail)}
+});
+document.addEventListener("change",function(ev){
+  var t=ev.target;
+  if(t.id==="receipt-file"){scan(t.files);return}
+  if(t.dataset.name!==undefined){
+    var m=cfg.members.slice(); m[+t.dataset.name]=t.value.trim()||("Persona "+(+t.dataset.name+1));
+    store.cfg({members:m,every:cfg.every}).catch(fail);
+  }
+  if(t.dataset.every){
+    var e=Object.assign({},cfg.every),v=Math.max(1,Math.min(90,parseInt(t.value,10)||0));
+    if(!v){t.value=everyOf(TASKS.filter(function(x){return x.id===t.dataset.every})[0]);return}
+    e[t.dataset.every]=v; store.cfg({members:cfg.members,every:e}).catch(fail);
+  }
+});
+
+/* Spesa: ogni scontrino è un documento in 'spese' con i nomi dei prodotti. Durata media = media dei giorni tra due acquisti dello stesso prodotto. */
+function slug(s){return String(s).toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g,"").replace(/\s+/g," ").trim()}
+function dstr(ts){var d=new Date(ts);return d.getFullYear()+"-"+("0"+(d.getMonth()+1)).slice(-2)+"-"+("0"+d.getDate()).slice(-2)}
+function ago(d){return d===0?"oggi":d===1?"ieri":d+" giorni fa"}
+function itemStats(){
+  var by={},today=Date.now();
+  spese.forEach(function(s){(s.items||[]).forEach(function(n){var k=slug(n);if(!k)return;var o=by[k];if(!o)o=by[k]={key:k,name:n,days:{}};o.days[sod(s.at).getTime()]=1})});
+  var out=[];
+  Object.keys(by).forEach(function(k){
+    var o=by[k],ds=Object.keys(o.days).map(Number).sort(function(a,b){return a-b});
+    var last=ds[ds.length-1],el=diff(today,last),iv=[];
+    for(var i=1;i<ds.length;i++)iv.push(Math.round((ds[i]-ds[i-1])/DAY));
+    var r={key:k,name:o.name,n:ds.length,last:last,el:el,avg:0,status:"learn",score:0};
+    if(iv.length){
+      var avg=Math.max(iv.reduce(function(a,b){return a+b},0)/iv.length,1);
+      r.avg=avg;r.score=el/avg;
+      r.status=el>=Math.max(avg*1.1,avg+1)?"out":el>=avg*0.75?"soon":"ok";
+    }
+    out.push(r);
+  });
+  return out.sort(function(a,b){return b.score-a.score||b.last-a.last});
+}
+function urgentCount(){return itemStats().filter(function(s){return s.status==="out"||s.status==="soon"}).length}
+function navHtml(){
+  var n=urgentCount();
+  return '<nav class="tabs" aria-label="Sezioni"><button data-act="view" data-v="pulizie" aria-pressed="'+(view==="pulizie")+'">Pulizie</button><button data-act="view" data-v="spesa" aria-pressed="'+(view==="spesa")+'">Spesa'+(n?' <span class="badge tn" title="Prodotti finiti o quasi">'+n+'</span>':'')+'</button></nav>';
+}
+function stRow(s){
+  var pill=s.status==="out"?'<span class="pill out">Finito</span>':s.status==="soon"?'<span class="pill soon">Sta per finire</span>':s.status==="ok"?'<span class="pill ok">A posto</span>':'<span class="pill">Nuovo</span>';
+  var m;
+  if(s.status==="learn")m="Comprato "+ago(s.el)+". Serve un altro acquisto per stimare la durata.";
+  else{
+    var av=Math.round(s.avg);
+    m="Ultimo acquisto "+ago(s.el)+" · dura circa "+pl(av,"giorno","giorni")+" ("+s.n+" acquisti)";
+    if(s.status==="ok")m+=" · finisce verso "+fmt(addDays(s.last,av),{day:"numeric",month:"short"});
+    if(s.status==="out"&&s.el>av)m+=" · "+pl(s.el-av,"giorno","giorni")+" oltre il solito";
+  }
+  return '<li class="item"><div class="srow"><div class="m"><span class="nm">'+esc(s.name)+'</span><span class="meta">'+esc(m)+'</span></div>'+pill+'<button class="btn" data-act="rebuy" data-name="'+esc(s.name)+'">Ricomprato</button></div></li>';
+}
+function renderSpesa(){
+  var el=document.getElementById("spesa-dyn");if(!el)return;
+  var st=itemStats(),h="";
+  if(!st.length)h='<p class="empty">Ancora nessuna spesa registrata. Salva la prima, poi un’altra con gli stessi prodotti: l’app calcola ogni quanto li finite e li segna in arancione e in rosso.</p>';
+  [["out","Da ricomprare","late"],["soon","Stanno per finire","soonG"],["ok","Ancora a posto",""],["learn","Sto imparando",""]].forEach(function(g){
+    var rs=st.filter(function(s){return s.status===g[0]});if(!rs.length)return;
+    h+='<section class="group '+g[2]+'"><h2>'+g[1]+'<small class="tn">'+rs.length+'</small></h2><ul>'+rs.map(stRow).join('')+'</ul></section>';
+  });
+  if(spese.length)h+='<section class="group"><h2>Ultime spese</h2><ul class="hist">'+spese.slice(0,6).map(function(s){
+    var its=(s.items||[]).join(", ");
+    return '<li><span class="t">'+esc(fmt(s.at,{day:"numeric",month:"short"}))+' · '+pl((s.items||[]).length,"prodotto","prodotti")+' <span class="w">'+esc(its.length>90?its.slice(0,90)+"…":its)+'</span></span><button class="x" data-act="delspesa" data-id="'+esc(s.id)+'">elimina</button></li>';
+  }).join('')+'</ul></section>';
+  el.innerHTML=h;
+}
+function setScanMsg(m){var e=document.getElementById("scan-msg");if(e)e.textContent=m}
+function saveSpesa(){
+  var ta=document.getElementById("sp-items"),dt=document.getElementById("sp-date"),seen={},items=[];
+  ta.value.split("\n").forEach(function(l){var n=l.trim().replace(/\s+/g," "),k=slug(n);if(n&&!seen[k]){seen[k]=1;items.push(n.slice(0,60))}});
+  if(!items.length){toast("Scrivi almeno un prodotto.");return}
+  var p=(dt.value||dstr(Date.now())).split("-"),at=new Date(+p[0],+p[1]-1,+p[2],12).getTime();
+  if(!isFinite(at)){toast("Controlla la data.");return}
+  store.addSpesa({at:at,items:items,by:me===null?-1:me}).then(function(id){
+    ta.value="";dt.value=dstr(Date.now());setScanMsg("");
+    toast("Spesa registrata: "+pl(items.length,"prodotto","prodotti"),function(){store.delSpesa(id).catch(fail)});
+  }).catch(fail);
+}
+function rebuy(name){
+  store.addSpesa({at:Date.now(),items:[name],by:me===null?-1:me}).then(function(id){
+    toast(name+" segnato come ricomprato",function(){store.delSpesa(id).catch(fail)});
+  }).catch(fail);
+}
+function scanErr(c){
+  if(c==="not_granted")return "Non hai dato il permesso a Claude di leggere lo scontrino. Scrivi i prodotti a mano.";
+  if(c==="image_rejected")return "Questa immagine non va bene. Prova con un’altra foto.";
+  if(c==="rate_limited")return "Troppe richieste. Riprova tra poco o scrivi i prodotti a mano.";
+  if(c==="invalid_json"||c==="empty_completion"||c==="refused")return "Non sono riuscito a leggere lo scontrino. Prova con una foto più nitida o scrivi i prodotti a mano.";
+  return "Lettura non riuscita. Riprova o scrivi i prodotti a mano.";
+}
+function scan(files){
+  if(!sample||!files||!files.length)return;
+  var input=document.getElementById("receipt-file"),fl=Array.prototype.slice.call(files,0,imgLim.maxCount||4);
+  var known=itemStats().map(function(s){return s.name}).slice(0,150);
+  var prompt="Le immagini sono foto di uno scontrino italiano di un supermercato. Estrai i prodotti acquistati e dai a ciascuno un nome generico, breve, in minuscolo e al singolare quando ha senso (esempi: 'LATTE PS GRANAROLO 1L' diventa 'latte', 'UOVA FRESCHE 6PZ' diventa 'uova', 'PETTO POLLO KG' diventa 'petto di pollo'). Includi alimenti, bevande e prodotti di consumo per la casa e l'igiene (carta igienica, detersivo, sapone). Ignora sconti, totali, IVA, sacchetti, punti fedeltà e buoni. Ogni prodotto compare una sola volta, anche se ha più righe o quantità. Se un prodotto corrisponde a uno di questi nomi già in uso, scrivi esattamente quel nome: "+JSON.stringify(known)+". Se sullo scontrino c'è la data di acquisto, riportala nel formato YYYY-MM-DD, altrimenti usa null. Rispondi solo con JSON in questa forma: {\"data\": \"2026-10-18\", \"prodotti\": [\"latte\", \"uova\"]}";
+  setScanMsg("Leggo lo scontrino…");
+  sample.json(prompt,{images:fl}).then(function(r){
+    var items=(r&&Array.isArray(r.prodotti)?r.prodotti:[]).filter(function(x){return typeof x==="string"&&x.trim()}).map(function(x){return x.trim().slice(0,60)});
+    var ta=document.getElementById("sp-items"),ex=ta.value.trim();
+    ta.value=(ex?ex+"\n":"")+items.join("\n");
+    if(r&&typeof r.data==="string"&&/^\d{4}-\d{2}-\d{2}$/.test(r.data)&&new Date(r.data).getTime()<=Date.now()+DAY)document.getElementById("sp-date").value=r.data;
+    setScanMsg(items.length?"Ho letto "+pl(items.length,"prodotto","prodotti")+". Controlla l’elenco e salva.":"Non ho trovato prodotti. Prova con una foto più nitida.");
+  }).catch(function(e){setScanMsg(scanErr(e&&e.code))}).then(function(){input.value=""});
+}
+
+/* Archivio: documento condiviso casa/config e raccolta fatti (una voce per pulizia segnata). */
+function localStore(){
+  offline=true;
+  return {
+    add:function(r){r.id="l"+Math.random().toString(36).slice(2);log.unshift(r);log.sort(function(a,b){return b.at-a.at});render();return Promise.resolve(r.id)},
+    del:function(id){log=log.filter(function(e){return e.id!==id});render();return Promise.resolve()},
+    cfg:function(c){cfg=c;render();return Promise.resolve()},
+    addSpesa:function(r){r.id="s"+Math.random().toString(36).slice(2);spese.unshift(r);spese.sort(function(a,b){return b.at-a.at});render();return Promise.resolve(r.id)},
+    delSpesa:function(id){spese=spese.filter(function(e){return e.id!==id});render();return Promise.resolve()}
+  };
+}
+function boot(db){
+  if(!db){store=localStore();render();return}
+  var logCol=db.collection("fatti"),cfgDoc=db.doc("casa/config");
+  store={
+    add:function(r){return logCol.add(r).then(function(ref){return ref.id})},
+    del:function(id){return logCol.doc(id).delete()},
+    cfg:function(c){return cfgDoc.set(c)},
+    addSpesa:function(r){return db.collection("spese").add(r).then(function(ref){return ref.id})},
+    delSpesa:function(id){return db.collection("spese").doc(id).delete()}
+  };
+  cfgDoc.onSnapshot(function(s){
+    if(s.exists){var d=s.data();cfg={members:d.members||cfg.members,every:d.every||{}}}
+    render();
+  },denied);
+  db.collection("spese").orderBy("at","desc").limit(400).onSnapshot(function(s){
+    spese=s.docs.map(function(d){var x=d.data();return {id:d.id,at:x.at,items:x.items||[],by:x.by}});
+    render();
+  },denied);
+  logCol.orderBy("at","desc").limit(500).onSnapshot(function(s){
+    log=s.docs.map(function(d){var x=d.data();return {id:d.id,key:x.key,by:x.by,at:x.at,min:x.min}});
+    render();
+  },denied);
+}
+render();
+try{document.getElementById("sp-date").value=dstr(Date.now())}catch(e){}
+if(window.claude&&window.claude.use){window.claude.use("sample").then(function(s){if(!s||!s.limits)return;return s.limits().then(function(l){if(l&&l.images){sample=s;imgLim=l.images;var f=document.getElementById("receipt-file");f.accept=l.images.mediaTypes.join(",");document.getElementById("scanbox").hidden=false}})}).catch(function(){})}
+function denied(){toast("Accesso ai dati negato. Usa l’account Google autorizzato.")}
+var gate=document.getElementById("gate"),wrapEl=document.querySelector(".wrap");
+function showGate(msg){gate.hidden=false;wrapEl.hidden=true;document.getElementById("gate-msg").textContent=msg||""}
+try{
+  firebase.initializeApp(window.FIREBASE_CONFIG);
+  var auth=firebase.auth(),started=false;
+  document.getElementById("gate-btn").onclick=function(){
+    var p=new firebase.auth.GoogleAuthProvider();
+    auth.signInWithPopup(p).catch(function(e){
+      if(e&&e.code==="auth/popup-blocked")auth.signInWithRedirect(p);
+      else showGate("Accesso non riuscito ("+((e&&e.code)||"errore")+").");
+    });
+  };
+  auth.onAuthStateChanged(function(u){
+    if(!u){showGate("");return}
+    gate.hidden=true;wrapEl.hidden=false;
+    if(!started){started=true;boot(firebase.firestore());render()}
+  });
+}catch(e){showGate("Configurazione Firebase mancante: compila firebase-config.js.")}
+var curDay=sod(Date.now()).getTime();
+setInterval(function(){if(sod(Date.now()).getTime()!==curDay){curDay=sod(Date.now()).getTime();render()}},60000);
+document.addEventListener("visibilitychange",function(){if(!document.hidden)render()});
+})();
+</script>
+</body></html>
